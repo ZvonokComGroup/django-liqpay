@@ -24,15 +24,20 @@ def liqpay_callback(request):
 
     data = form.cleaned_data['data']
     signature = form.cleaned_data['signature']
-
-    liqpay = LiqPay(settings.LIQPAY_PUBLIC_KEY, settings.LIQPAY_PRIVATE_KEY)
-    our_sign = liqpay.str_to_sign(settings.LIQPAY_PRIVATE_KEY + data +
-                                  settings.LIQPAY_PRIVATE_KEY)
+    default_conf = settings.LIQPAY_CONF[settings.DEFAULT_LIQPAY]
+    additional_conf = settings.LIQPAY_CONF[settings.ADDITIONAL_LIQPAY]
+    liqpay = LiqPay(default_conf['LIQPAY_PUBLIC_KEY'], default_conf['LIQPAY_PRIVATE_KEY'])
+    our_sign = liqpay.str_to_sign(default_conf['LIQPAY_PRIVATE_KEY'] + data +
+                                  default_conf['LIQPAY_PRIVATE_KEY'])
 
     if signature != our_sign:
-        logger.warning('Invalid signature: our {}!={}'.format(
-            our_sign, signature))
-        return HttpResponse(status=400)
+        liqpay = LiqPay(additional_conf['LIQPAY_PUBLIC_KEY'], additional_conf['LIQPAY_PRIVATE_KEY'])
+        our_sign = liqpay.str_to_sign(additional_conf['LIQPAY_PRIVATE_KEY'] + data +
+                                      additional_conf['LIQPAY_PRIVATE_KEY'])
+        if signature != our_sign:
+            logger.warning('Invalid signature: our {}!={}'.format(
+                our_sign, signature))
+            return HttpResponse(status=400)
 
     data = liqpay.decode_data_from_str(data)
 
